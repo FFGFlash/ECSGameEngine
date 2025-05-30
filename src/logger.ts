@@ -1,3 +1,3 @@
 import debug from 'debug'
-const logger = debug('my-library')
+const logger = debug('ecs-game-engine')
 export default logger

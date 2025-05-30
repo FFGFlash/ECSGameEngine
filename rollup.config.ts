@@ -18,7 +18,7 @@ export default defineConfig([
   {
     input: 'src/index.ts',
     output: [{ file: 'dist/index.cjs', format: 'cjs', exports: 'auto' }],
-    plugins: [nodeResolve(), ...sharedPlugins, typescript({ tsconfig, declaration: true })],
+    plugins: [nodeResolve(), ...sharedPlugins, typescript({ tsconfig })],
     external: ['fs', 'path', 'dotenv'],
   },
   {
