@@ -1,0 +1,46 @@
+{
+  "name": "lib-name-here",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "browser": "dist/index.min.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "browser": "./dist/index.min.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "npm run clean && rollup -c",
+    "clean": "rimraf dist",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "Drake Taylor",
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^22.x",
+    "dotenv": "^16.5.0",
+    "rimraf": "*",
+    "rollup": "^4.x",
+    "tslib": "^2.8.1",
+    "typescript": "^5.x",
+    "vite": "^6.x",
+    "vitest": "^3.x"
+  },
+  "dependencies": {
+    "debug": "^4.4.1"
+  }
+}
