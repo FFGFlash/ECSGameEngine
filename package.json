@@ -1,5 +1,5 @@
 {
-  "name": "lib-name-here",
+  "name": "@ffgflash/ecs",
   "type": "module",
   "version": "1.0.0",
   "main": "dist/index.cjs",
