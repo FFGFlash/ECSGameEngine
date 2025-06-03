@@ -1,12 +1,10 @@
-import { ComponentName } from './types'
 import Archetype from './Archetype'
+import type { ComponentName } from './World'
 
 export default class ArchetypeMap {
   private static componentMap = new Map<ComponentName, number>()
-
   private static getComponentId(name: ComponentName) {
     if (!this.componentMap.has(name)) this.componentMap.set(name, this.componentMap.size)
-
     return this.componentMap.get(name)!
   }
 
@@ -19,8 +17,8 @@ export default class ArchetypeMap {
       .join('|')
   }
 
-  get<Names extends readonly ComponentName[]>(keys: Names): Archetype<Names> | undefined {
-    return this.map.get(this.normalizeKey(keys))
+  get<Names extends readonly ComponentName[]>(keys: Names) {
+    return this.map.get(this.normalizeKey(keys)) as Archetype<Names> | undefined
   }
 
   set<Names extends readonly ComponentName[]>(keys: Names, archetype: Archetype<Names>) {
@@ -44,7 +42,11 @@ export default class ArchetypeMap {
     return this.map.keys()
   }
 
-  values(): IterableIterator<Archetype<any>> {
+  values(): IterableIterator<Archetype> {
     return this.map.values()
+  }
+
+  entries(): IterableIterator<[string, Archetype]> {
+    return this.map.entries()
   }
 }

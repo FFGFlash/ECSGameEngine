@@ -1,70 +1,117 @@
-import { ComponentName, ComponentOf, QueryIterator, QueryResult } from './types'
-import World from './World'
+import ArchetypeMap from './ArchetypeMap'
+import type { ComponentData, ComponentName } from './World'
 
 export default class Query<Accesses extends AccessList = []> {
-  private access = new Map<ComponentName, AccessMode>()
+  private _iterator?: Iterator<QueryYield<Accesses>>
+  private _peeked?: IteratorResult<QueryYield<Accesses>>
+  private _locked = false
 
-  constructor(private world: World) {}
+  private components = new Map<ComponentName, AccessMode>()
+
+  constructor(private archetypes: ArchetypeMap) {}
 
   read<
     N extends AvailableComponentNames<Accesses>[],
     A extends AccessList = [...Accesses, ...{ [K in keyof N]: [N[K], 'read'] }],
-  >(...names: IsTupleUnique<N> extends true ? N : never): Query<A> {
+  >(...names: N): Query<A> {
+    if (this._locked) throw new Error('Query is locked and cannot be modified')
     for (const name of names) {
-      if (this.access.has(name)) throw new Error(`Component ${name} already used in this query`)
-      this.access.set(name, 'read')
+      if (this.components.has(name)) throw new Error(`Component ${name} already used in this query`)
+      this.components.set(name, 'read')
     }
-    return this as unknown as Query<A>
+    return this as Query<A>
+  }
+
+  lock() {
+    this._locked = true
   }
 
   write<
     N extends AvailableComponentNames<Accesses>[],
     A extends AccessList = [...Accesses, ...{ [K in keyof N]: [N[K], 'write'] }],
-  >(...names: IsTupleUnique<N> extends true ? N : never): Query<A> {
+  >(...names: N): Query<A> {
+    if (this._locked) throw new Error('Query is locked and cannot be modified')
     for (const name of names) {
-      if (this.access.has(name)) throw new Error(`Component ${name} already used in this query`)
-      this.access.set(name, 'write')
+      if (this.components.has(name)) throw new Error(`Component ${name} already used in this query`)
+      this.components.set(name, 'write')
     }
-    return this as unknown as Query<A>
+    return this as Query<A>
   }
 
-  *[Symbol.iterator](): IterableIterator<
-    [entity: number, ...components: ComponentAccessMap<Accesses>]
-  > {
-    const names = [...this.access.keys()]
-    const archetypes = this.world.queryArchetypes(names)
+  with<
+    N extends AvailableComponentNames<Accesses>[],
+    A extends AccessList = [...Accesses, ...{ [K in keyof N]: [N[K], 'none'] }],
+  >(...names: N): Query<A> {
+    if (this._locked) throw new Error('Query is locked and cannot be modified')
+    for (const name of names) {
+      if (this.components.has(name)) throw new Error(`Component ${name} already used in this query`)
+      this.components.set(name, 'none')
+    }
+    return this as Query<A>
+  }
 
-    for (const arch of archetypes) {
-      for (const [entity, ...components] of arch.query(names)) {
+  reset() {
+    this._iterator = undefined
+    this._peeked = undefined
+  }
+
+  peek() {
+    if (!this._iterator) this._iterator = this.makeIterator()
+    if (!this._peeked) this._peeked = this._iterator.next()
+    return this._peeked.done ? undefined : this._peeked.value
+  }
+
+  next() {
+    if (!this._iterator) this._iterator = this.makeIterator()
+    if (this._peeked) {
+      const result = this._peeked
+      this._peeked = undefined
+      return result
+    }
+    return this._iterator.next()
+  }
+
+  private *makeIterator(): Iterator<QueryYield<Accesses>> {
+    const names = [...this.components.keys()]
+    const filteredNames = names.filter(name => this.components.get(name) !== 'none')
+
+    for (const arch of this.archetypes.values()) {
+      if (!arch.matches(names)) continue
+      for (const [entity, ...components] of arch.query(filteredNames)) {
         const lockedComponents = components.map((comp, i) => {
           const name = names[i]
-          if (this.access.get(name) === 'write') return comp
-          return Object.freeze({ ...(comp as any) })
+          if (this.components.get(name) === 'write') return comp
+          return Object.freeze({ ...(comp as any) }) // Freeze for read access
         })
-        yield [entity, ...lockedComponents] as [number, ...ComponentAccessMap<Accesses>]
+
+        // Yield the entity ID and the components with their access modes
+        yield [entity, ...lockedComponents] as QueryYield<Accesses>
       }
     }
   }
+
+  [Symbol.iterator](): Iterator<QueryYield<Accesses>> {
+    this._iterator = this.makeIterator()
+    this._peeked = undefined
+    return this._iterator
+  }
 }
 
-type AccessMode = 'read' | 'write'
-type AccessList = [ComponentName, AccessMode][]
-type ComponentAccessMap<T extends AccessList> = {
-  [K in keyof T]: T[K] extends [infer N, infer A]
-    ? N extends ComponentName
-      ? A extends 'read'
-        ? Readonly<ComponentOf<N>>
-        : ComponentOf<N>
+export type AccessMode = 'read' | 'write' | 'none'
+export type AccessList = [ComponentName, AccessMode][]
+
+export type QueryYield<T extends AccessList> = [
+  number,
+  ...{
+    [K in keyof T]: T[K] extends [infer N, infer A]
+      ? N extends ComponentName
+        ? A extends 'read'
+          ? Readonly<ComponentData<N>>
+          : A extends 'write'
+          ? ComponentData<N>
+          : never
+        : never
       : never
-    : never
-}
-type IsTupleUnique<T extends readonly any[], Seen extends any[] = []> = T extends [
-  infer F,
-  ...infer R,
+  },
 ]
-  ? F extends Seen[number]
-    ? false
-    : IsTupleUnique<R, [...Seen, F]>
-  : true
-type UniqueTuple<T extends readonly ComponentName[]> = IsTupleUnique<T> extends true ? T : never
-type AvailableComponentNames<Used extends AccessList> = Exclude<ComponentName, Used[number][0]>
+export type AvailableComponentNames<T extends AccessList> = Exclude<ComponentName, T[number][0]>

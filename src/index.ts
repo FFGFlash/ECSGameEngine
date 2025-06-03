@@ -1,2 +1,2 @@
-export { default as World } from './World'
-export * from './types'
+export { default } from './Engine'
+export { ComponentRegistry, ResourceRegistry, EntityID } from './World'
