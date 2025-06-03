@@ -29,6 +29,12 @@ export default class Archetype<Names extends readonly ComponentName[] = any> {
     return index
   }
 
+  setComponentAt<K extends ComponentName>(name: K, index: number, value: ComponentData<K>) {
+    if (index < 0 || index >= this.entities.length)
+      throw new RangeError(`Index ${index} out of bounds for archetype`)
+    this.columns[name][index] = value
+  }
+
   getComponentAt<K extends ComponentName>(name: K, index: number) {
     if (index < 0 || index >= this.entities.length)
       throw new RangeError(`Index ${index} out of bounds for archetype`)

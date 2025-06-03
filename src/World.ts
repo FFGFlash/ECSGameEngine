@@ -1,6 +1,9 @@
+import cloneDeep from 'clone-deep'
 import Archetype, { ComponentMap, ComponentMapStore, ComponentStore } from './Archetype'
 import ArchetypeMap from './ArchetypeMap'
 import Query from './Query'
+import deepFreeze from 'deep-freeze'
+import { handleInstanceCloning } from './Cloning'
 
 export default class World<Resources extends readonly ResourceName[] = []> {
   private nextEntityId = 0
@@ -26,9 +29,11 @@ export default class World<Resources extends readonly ResourceName[] = []> {
     return this
   }
 
-  getResource<N extends ResourceName>(name: N): Readonly<ResourceData<N>> {
+  getResource<N extends ResourceName>(name: N) {
     if (!(name in this.resources)) throw new Error(`Resource ${name} does not exist`)
-    return Object.freeze(structuredClone(this.resources[name]))
+    return deepFreeze(
+      cloneDeep<ResourceData<N>>(this.resources[name] as ResourceData<N>, handleInstanceCloning),
+    )
   }
 
   getMutableResource<N extends ResourceName>(name: N): ResourceData<N> {
@@ -79,7 +84,7 @@ export default class World<Resources extends readonly ResourceName[] = []> {
       const index = oldArchetype.getEntityIndex(entity)
       const oldKeys = Array.from(oldArchetype.signature).filter(k => k !== name)
       oldValues = oldKeys.reduce((acc, key) => {
-        acc[key] = oldArchetype.getComponentAt(key, index) as any
+        ;(acc as any)[key] = oldArchetype.getComponentAt(key, index)
         return acc
       }, {} as ComponentMap)
       newKeys.unshift(...oldKeys)
@@ -104,7 +109,7 @@ export default class World<Resources extends readonly ResourceName[] = []> {
     const index = oldArchetype.getEntityIndex(entity)
     const newKeys = Array.from(oldArchetype.signature).filter(k => k !== name)
     const newValues = newKeys.reduce((acc, key) => {
-      acc[key] = oldArchetype.getComponentAt(key, index) as any
+      ;(acc as any)[key] = oldArchetype.getComponentAt(key, index)
       return acc
     }, {} as ComponentMap)
 

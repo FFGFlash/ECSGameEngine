@@ -1,5 +1,8 @@
+import cloneDeep from 'clone-deep'
 import ArchetypeMap from './ArchetypeMap'
 import type { ComponentData, ComponentName } from './World'
+import deepFreeze from 'deep-freeze'
+import { handleInstanceCloning } from './Cloning'
 
 export default class Query<Accesses extends AccessList = []> {
   private _iterator?: Iterator<QueryYield<Accesses>>
@@ -24,6 +27,7 @@ export default class Query<Accesses extends AccessList = []> {
 
   lock() {
     this._locked = true
+    return this as Query<Accesses>
   }
 
   write<
@@ -55,7 +59,7 @@ export default class Query<Accesses extends AccessList = []> {
     this._peeked = undefined
   }
 
-  peek() {
+  peek(): QueryYield<Accesses> | undefined {
     if (!this._iterator) this._iterator = this.makeIterator()
     if (!this._peeked) this._peeked = this._iterator.next()
     return this._peeked.done ? undefined : this._peeked.value
@@ -79,9 +83,9 @@ export default class Query<Accesses extends AccessList = []> {
       if (!arch.matches(names)) continue
       for (const [entity, ...components] of arch.query(filteredNames)) {
         const lockedComponents = components.map((comp, i) => {
-          const name = names[i]
+          const name = filteredNames[i]
           if (this.components.get(name) === 'write') return comp
-          return Object.freeze({ ...(comp as any) }) // Freeze for read access
+          return deepFreeze(cloneDeep(comp, handleInstanceCloning)) // Freeze for read access
         })
 
         // Yield the entity ID and the components with their access modes
@@ -102,16 +106,26 @@ export type AccessList = [ComponentName, AccessMode][]
 
 export type QueryYield<T extends AccessList> = [
   number,
-  ...{
-    [K in keyof T]: T[K] extends [infer N, infer A]
-      ? N extends ComponentName
-        ? A extends 'read'
-          ? Readonly<ComponentData<N>>
-          : A extends 'write'
-          ? ComponentData<N>
-          : never
-        : never
-      : never
-  },
+  ...Filter<
+    {
+      [K in keyof T]: T[K] extends [infer N, infer A]
+        ? N extends ComponentName
+          ? A extends 'read'
+            ? Readonly<ComponentData<N>>
+            : A extends 'write'
+            ? ComponentData<N>
+            : 'nil'
+          : 'nil'
+        : 'nil'
+    },
+    'nil'
+  >,
 ]
 export type AvailableComponentNames<T extends AccessList> = Exclude<ComponentName, T[number][0]>
+export type Filter<T extends unknown[], U> = T extends []
+  ? []
+  : T extends [infer H, ...infer R]
+  ? H extends U
+    ? Filter<R, U>
+    : [H, ...Filter<R, U>]
+  : T

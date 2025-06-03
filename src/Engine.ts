@@ -144,33 +144,30 @@ export default class Engine<Resources extends readonly ResourceName[] = []> {
         }
 
         //! Handle entity queries
-        return () => {
-          const query = new Proxy(target.query, {
-            get(qTarget, qProp, qReceiver) {
-              if (qProp === 'read') {
-                return (...names: ComponentName[]) => {
-                  names.forEach(name => {
-                    const id = `component#${name}`
-                    if (writes.has(id)) return
-                    reads.add(id)
-                  })
-                  return qTarget.read(...names)
-                }
-              } else if (qProp === 'write') {
-                return (...names: ComponentName[]) => {
-                  names.forEach(name => {
-                    const id = `component#${name}`
-                    if (reads.has(id)) reads.delete(id)
-                    writes.add(id)
-                  })
-                  return qTarget.write(...names)
-                }
+        return new Proxy(target.query, {
+          get(qTarget, qProp, qReceiver) {
+            if (qProp === 'read') {
+              return (...names: ComponentName[]) => {
+                names.forEach(name => {
+                  const id = `component#${name}`
+                  if (writes.has(id)) return
+                  reads.add(id)
+                })
+                return qTarget.read(...names)
               }
-              return Reflect.get(qTarget, qProp, qReceiver)
-            },
-          })
-          return query
-        }
+            } else if (qProp === 'write') {
+              return (...names: ComponentName[]) => {
+                names.forEach(name => {
+                  const id = `component#${name}`
+                  if (reads.has(id)) reads.delete(id)
+                  writes.add(id)
+                })
+                return qTarget.write(...names)
+              }
+            }
+            return Reflect.get(qTarget, qProp, qReceiver)
+          },
+        })
       },
     })
   }
