@@ -19,10 +19,20 @@
     "clean": "rimraf dist",
     "test": "vitest run"
   },
-  "keywords": [],
+  "keywords": [
+    "game engine",
+    "ecs",
+    "entity-component-system",
+    "typescript",
+    "javascript",
+    "game development"
+  ],
   "author": "Drake Taylor",
   "license": "MIT",
-  "description": "",
+  "files": [
+    "dist"
+  ],
+  "description": "A simple game engine based on the Entity-Component-System (ECS) architecture, designed for TypeScript and JavaScript.",
   "devDependencies": {
     "@rollup/plugin-alias": "^5.1.1",
     "@rollup/plugin-commonjs": "^28.0.3",
@@ -46,5 +56,17 @@
     "clone-deep": "^4.0.1",
     "debug": "^4.4.1",
     "deep-freeze": "^0.0.1"
-  }
+  },
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FFGFlash/ECSGameEngine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/FFGFlash/ECSGameEngine/issues"
+  },
+  "homepage": "https://github.com/FFGFlash/ECSGameEngine#readme"
 }
