@@ -1,7 +1,7 @@
 {
   "name": "@ffgflash/ecs",
   "type": "module",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "browser": "dist/index.min.js",
